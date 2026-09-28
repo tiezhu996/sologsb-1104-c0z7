@@ -1,5 +1,6 @@
 import Dexie, { type Table } from 'dexie'
 import type { Diagram, HitArea } from '../types/diagram'
+import type { DrillRound } from '../types/drill'
 import type { Furniture } from '../types/furniture'
 import type { JointType } from '../types/jointType'
 import type { Member } from '../types/member'
@@ -11,6 +12,7 @@ export class MortiseDatabase extends Dexie {
   steps!: Table<DisassemblyStep, string>
   diagrams!: Table<Diagram, string>
   furniture!: Table<Furniture, string>
+  drills!: Table<DrillRound, string>
 
   constructor() {
     super('gbmortise-db')
@@ -20,6 +22,10 @@ export class MortiseDatabase extends Dexie {
       steps: 'id, jointTypeId, seq, action',
       diagrams: 'id, jointTypeId, stepId, view',
       furniture: 'id, jointTypeId, name',
+    }
+    const schemaWithDrills = {
+      ...schema,
+      drills: 'id, jointTypeId, endedAt',
     }
 
     this.version(1).stores(schema)
@@ -40,6 +46,8 @@ export class MortiseDatabase extends Dexie {
         furniture.schemaRev = 2
       })
     })
+    // 仅新增演练记录表；旧库没有任何演练数据，无需迁移回填
+    this.version(3).stores(schemaWithDrills)
   }
 }
 

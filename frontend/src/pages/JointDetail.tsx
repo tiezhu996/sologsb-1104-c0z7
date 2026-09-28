@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { BlankPanel } from '../components/common/BlankPanel'
 import { DifficultyTag } from '../components/common/DifficultyTag'
+import { DrillHistory } from '../components/common/DrillHistory'
 import { SizeField } from '../components/common/SizeField'
 import { StepRail } from '../components/common/StepRail'
 import { useStepOrder } from '../hooks/useStepOrder'
@@ -18,7 +19,7 @@ export default function JointDetail() {
   const loading = useJointStore((state) => state.loading)
   const loadAll = useJointStore((state) => state.loadAll)
   const updateMemberDimensions = useJointStore((state) => state.updateMemberDimensions)
-  const { steps, totalDurationSec, currentStepIndex, move, setCurrentStep } = useStepOrder(id)
+  const { steps, totalDurationSec, currentStepIndex, move, setCurrentStep, dragLocked } = useStepOrder(id)
 
   useEffect(() => {
     void loadAll()
@@ -70,6 +71,7 @@ export default function JointDetail() {
         </div>
         <div className="flex flex-wrap gap-3 border-t border-wood-100 bg-wood-50/60 px-6 py-4 sm:px-8">
           <Link className="primary-button" to={`/joints/${joint.id}/steps`}>编排拆装步序</Link>
+          <Link className="secondary-button" to={`/joints/${joint.id}/drill`}>演练计时</Link>
           <Link className="secondary-button" to={`/joints/${joint.id}/diagram`}>进入示意图绘制台</Link>
           <button type="button" className="secondary-button" onClick={() => void exportJointData(joint.id, joint.name)}>导出当前类型</button>
         </div>
@@ -204,9 +206,20 @@ export default function JointDetail() {
           {steps.length === 0 ? (
             <BlankPanel title="尚无拆装步骤" description="进入步序编排页补充拆装动作。" />
           ) : (
-            <StepRail steps={steps} currentIndex={currentStepIndex} onSelect={setCurrentStep} onMove={(from, to) => void move(from, to)} />
+            <StepRail steps={steps} currentIndex={currentStepIndex} onSelect={setCurrentStep} onMove={(from, to) => void move(from, to)} dragLocked={dragLocked} />
           )}
         </div>
+      </section>
+
+      <section className="space-y-4">
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <h2 className="text-xl font-semibold text-wood-900">最近演练计时</h2>
+            <p className="mt-1 text-sm text-stone-500">翻看最近 5 轮演练，核对每步计划、实际耗时与偏差，录错的记录可直接清除。</p>
+          </div>
+          <Link to={`/joints/${id}/drill`} className="secondary-button">开始新一轮演练</Link>
+        </div>
+        <DrillHistory jointTypeId={id} limit={5} showEntry={false} />
       </section>
     </div>
   )

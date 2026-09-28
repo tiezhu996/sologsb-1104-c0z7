@@ -6,36 +6,52 @@ interface StepRailProps {
   currentIndex: number
   onSelect: (index: number) => void
   onMove: (from: number, to: number) => void
+  /** 演练计时进行中锁定拖动，避免时间对错步骤 */
+  dragLocked?: boolean
 }
 
-export function StepRail({ steps, currentIndex, onSelect, onMove }: StepRailProps) {
+export function StepRail({ steps, currentIndex, onSelect, onMove, dragLocked = false }: StepRailProps) {
   const handleDrop = (event: DragEvent<HTMLElement>, to: number) => {
     event.preventDefault()
+    if (dragLocked) return
     const from = Number(event.dataTransfer.getData('text/plain'))
     if (Number.isInteger(from)) onMove(from, to)
   }
 
   return (
     <div className="space-y-3" aria-label="拆装步骤轨道">
+      {dragLocked ? (
+        <div className="flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900" data-testid="step-drag-lock">
+          <svg aria-hidden="true" viewBox="0 0 24 24" className="h-4 w-4 shrink-0" fill="none" stroke="currentColor" strokeWidth="1.8">
+            <rect x="5" y="11" width="14" height="9" rx="2" /><path d="M8 11V7a4 4 0 0 1 8 0v4" />
+          </svg>
+          演练计时中，步序拖动已锁定，完成或放弃本轮后恢复调序。
+        </div>
+      ) : null}
       {steps.map((step, index) => (
         <article
           key={step.id}
-          draggable
+          draggable={!dragLocked}
           onDragStart={(event) => {
+            if (dragLocked) {
+              event.preventDefault()
+              return
+            }
             event.dataTransfer.effectAllowed = 'move'
             event.dataTransfer.setData('text/plain', String(index))
           }}
           onDragOver={(event) => {
             event.preventDefault()
-            event.dataTransfer.dropEffect = 'move'
+            event.dataTransfer.dropEffect = dragLocked ? 'none' : 'move'
           }}
           onDrop={(event) => handleDrop(event, index)}
           className={`group rounded-xl border p-3 transition ${
             currentIndex === index
               ? 'border-wood-500 bg-wood-50 shadow-sm'
               : 'border-stone-200 bg-white hover:border-wood-100'
-          }`}
+          } ${dragLocked ? 'cursor-default opacity-90' : ''}`}
           data-testid="step-row"
+          aria-disabled={dragLocked}
         >
           <button
             type="button"
@@ -57,8 +73,10 @@ export function StepRail({ steps, currentIndex, onSelect, onMove }: StepRailProp
             </span>
           </button>
           <div className="mt-2 flex justify-end">
-            <span className="cursor-grab select-none rounded px-2 py-1 text-[11px] text-stone-400 group-active:cursor-grabbing">
-              拖动调序
+            <span className={`select-none rounded px-2 py-1 text-[11px] ${
+              dragLocked ? 'cursor-not-allowed text-stone-300' : 'cursor-grab text-stone-400 group-active:cursor-grabbing'
+            }`}>
+              {dragLocked ? '调序已锁定' : '拖动调序'}
             </span>
           </div>
         </article>

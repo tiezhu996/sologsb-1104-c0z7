@@ -16,7 +16,7 @@ export default function StepBoard() {
   const selectedMemberId = useDiagramStore((state) => state.selectedMemberId)
   const loadDiagrams = useDiagramStore((state) => state.loadDiagrams)
   const setSelectedMember = useDiagramStore((state) => state.setSelectedMember)
-  const { steps, totalDurationSec, currentStepIndex, move, setCurrentStep } = useStepOrder(id)
+  const { steps, totalDurationSec, currentStepIndex, move, setCurrentStep, dragLocked } = useStepOrder(id)
 
   useEffect(() => {
     void loadAll()
@@ -43,8 +43,17 @@ export default function StepBoard() {
             拖动左侧步骤调整真实顺序，右侧同步查看每一步的示意图和风险提醒。
           </p>
         </div>
-        <div className="rounded-xl border border-wood-100 bg-white px-5 py-3 text-sm text-stone-600 shadow-sm">
-          {steps.length} 步 · 总停留 <strong className="text-wood-700">{totalDurationSec}</strong> 秒
+        <div className="flex flex-wrap items-center gap-3">
+          {dragLocked ? (
+            <Link to={`/joints/${id}/drill`} className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-2 text-sm font-medium text-amber-900 shadow-sm hover:bg-amber-100">
+              演练计时中 · 返回演练
+            </Link>
+          ) : (
+            <Link to={`/joints/${id}/drill`} className="secondary-button">演练计时</Link>
+          )}
+          <div className="rounded-xl border border-wood-100 bg-white px-5 py-3 text-sm text-stone-600 shadow-sm">
+            {steps.length} 步 · 总停留 <strong className="text-wood-700">{totalDurationSec}</strong> 秒
+          </div>
         </div>
       </section>
 
@@ -65,6 +74,7 @@ export default function StepBoard() {
               currentIndex={currentStepIndex}
               onSelect={setCurrentStep}
               onMove={(from, to) => void move(from, to)}
+              dragLocked={dragLocked}
             />
           </section>
 

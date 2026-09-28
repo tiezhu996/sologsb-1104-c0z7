@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo } from 'react'
+import { useDrillSessionStore } from '../stores/drillSessionStore'
 import { useStepStore } from '../stores/stepStore'
 import type { DisassemblyStep } from '../types/step'
 
@@ -6,6 +7,8 @@ interface StepOrderResult {
   steps: DisassemblyStep[]
   totalDurationSec: number
   currentStepIndex: number
+  /** 当前类型正在演练时为 true，用于锁定拖动调序 */
+  dragLocked: boolean
   move: (from: number, to: number) => Promise<void>
   setCurrentStep: (index: number) => void
 }
@@ -15,6 +18,7 @@ export function useStepOrder(jointTypeId: string): StepOrderResult {
   const currentStepIndex = useStepStore((state) => state.currentStepIndex)
   const loadSteps = useStepStore((state) => state.loadSteps)
   const setCurrentStep = useStepStore((state) => state.setCurrentStep)
+  const activeSession = useDrillSessionStore((state) => state.session)
 
   useEffect(() => {
     if (!jointTypeId) return
@@ -33,14 +37,18 @@ export function useStepOrder(jointTypeId: string): StepOrderResult {
     [steps],
   )
 
+  const dragLocked = activeSession?.jointTypeId === jointTypeId
+
   const move = useCallback(async (from: number, to: number) => {
+    if (useDrillSessionStore.getState().session?.jointTypeId === jointTypeId) return
     await useStepStore.getState().moveStep(from, to)
-  }, [])
+  }, [jointTypeId])
 
   return {
     steps,
     totalDurationSec,
     currentStepIndex: Math.min(currentStepIndex, Math.max(0, steps.length - 1)),
+    dragLocked,
     move,
     setCurrentStep,
   }

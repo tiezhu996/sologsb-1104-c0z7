@@ -2,9 +2,11 @@ import { useEffect } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { BlankPanel } from '../components/common/BlankPanel'
 import { DifficultyTag } from '../components/common/DifficultyTag'
+import { DrillHistory } from '../components/common/DrillHistory'
 import { SizeField } from '../components/common/SizeField'
 import { StepRail } from '../components/common/StepRail'
 import { useStepOrder } from '../hooks/useStepOrder'
+import { useDrillStore } from '../stores/drillStore'
 import { useJointStore } from '../stores/jointStore'
 import { checkTolerance, formatDimension } from '../utils/measure'
 import { exportJointData } from '../utils/export'
@@ -18,17 +20,26 @@ export default function JointDetail() {
   const loading = useJointStore((state) => state.loading)
   const loadAll = useJointStore((state) => state.loadAll)
   const updateMemberDimensions = useJointStore((state) => state.updateMemberDimensions)
+  const drillSessions = useDrillStore((state) => state.sessions)
+  const loadDrillSessions = useDrillStore((state) => state.loadByJoint)
+  const removeDrillSession = useDrillStore((state) => state.removeSession)
   const { steps, totalDurationSec, currentStepIndex, move, setCurrentStep } = useStepOrder(id)
 
   useEffect(() => {
     void loadAll()
-  }, [loadAll])
+    if (id) void loadDrillSessions(id)
+  }, [loadAll, id, loadDrillSessions])
 
   const joint = joints.find((item) => item.id === id)
   const currentMembers = members
     .filter((member) => member.jointTypeId === id)
     .sort((a, b) => a.lengthMm - b.lengthMm)
   const currentFurniture = furniture.filter((item) => item.jointTypeId === id)
+  const currentDrillSessions = drillSessions.filter((session) => session.jointTypeId === id)
+  const latestDrill = currentDrillSessions[0]
+  const latestActuals = latestDrill
+    ? latestDrill.records.map((record) => ({ stepId: record.stepId, actualSec: record.actualSec }))
+    : []
 
   if (!joint && !loading) {
     return (
@@ -72,8 +83,7 @@ export default function JointDetail() {
           <Link className="primary-button" to={`/joints/${joint.id}/steps`}>编排拆装步序</Link>
           <Link className="secondary-button" to={`/joints/${joint.id}/diagram`}>进入示意图绘制台</Link>
           <button type="button" className="secondary-button" onClick={() => void exportJointData(joint.id, joint.name)}>导出当前类型</button>
-        </div>
-      </section>
+        </div>      </section>
 
       <section className="space-y-4">
         <div className="flex items-end justify-between gap-4">
@@ -204,10 +214,27 @@ export default function JointDetail() {
           {steps.length === 0 ? (
             <BlankPanel title="尚无拆装步骤" description="进入步序编排页补充拆装动作。" />
           ) : (
-            <StepRail steps={steps} currentIndex={currentStepIndex} onSelect={setCurrentStep} onMove={(from, to) => void move(from, to)} />
+            <StepRail
+              steps={steps}
+              currentIndex={currentStepIndex}
+              actuals={latestActuals}
+              onSelect={setCurrentStep}
+              onMove={(from, to) => void move(from, to)}
+            />
           )}
+          {latestDrill ? (
+            <p className="text-xs text-stone-500">
+              上方实际与偏差取自最近一轮演练（{latestDrill.records.length} 步计时）。
+            </p>
+          ) : null}
         </div>
       </section>
+
+      <DrillHistory
+        jointTypeId={id}
+        sessions={currentDrillSessions}
+        onDelete={removeDrillSession}
+      />
     </div>
   )
 }

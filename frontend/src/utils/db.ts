@@ -1,5 +1,6 @@
 import Dexie, { type Table } from 'dexie'
 import type { Diagram, HitArea } from '../types/diagram'
+import type { DrillSession } from '../types/drill'
 import type { Furniture } from '../types/furniture'
 import type { JointType } from '../types/jointType'
 import type { Member } from '../types/member'
@@ -11,6 +12,7 @@ export class MortiseDatabase extends Dexie {
   steps!: Table<DisassemblyStep, string>
   diagrams!: Table<Diagram, string>
   furniture!: Table<Furniture, string>
+  drillSessions!: Table<DrillSession, string>
 
   constructor() {
     super('gbmortise-db')
@@ -39,6 +41,10 @@ export class MortiseDatabase extends Dexie {
       await transaction.table<Furniture, string>('furniture').toCollection().modify((furniture) => {
         furniture.schemaRev = 2
       })
+    })
+    // version(3)：新增演练计时记录表；旧库直接升级即可，无旧记录时详情页按空列表展示。
+    this.version(3).stores({
+      drillSessions: 'id, jointTypeId, endedAt',
     })
   }
 }
